@@ -20,9 +20,17 @@ enum Commands {
         key: String,
     },
     Add {
-        project: String,
         alias: String,
         directory: String,
+
+        /// Project to add alias to. Defaults to current project
+        #[arg(short, long)]
+        project: Option<String>,
+    },
+    Ls {
+        /// Show all project aliases
+        #[arg(long)]
+        all: bool,
     }
 }
 
@@ -43,7 +51,8 @@ fn main() {
 
     match args.command {
         Commands::Cd { key: alias } => cd_cmd(&alias),
-        Commands::Add { project, alias, directory } => add_cmd(project, alias, directory),
+        Commands::Add { alias, directory, project } => add_cmd(alias, directory, project),
+        Commands::Ls { all } => ls_cmd(all),
     };
 }
 
@@ -89,17 +98,46 @@ fn cd_cmd(key: &str) {
     }
 }
 
-fn add_cmd(project: String, alias: String, directory: String) {
+fn add_cmd(alias: String, directory: String, project: Option<String>) {
     let mut goto_file = deserialize_goto_file();
+    let current_dir = env::current_dir().expect("Process has no working directory");
+    let directory = directory.trim_end_matches('/');
 
-    if let Some(proj) = goto_file.projects.iter_mut().find(|p| p.root == project) {
-        proj.aliases.insert(alias, directory);
-    } else {
+    if let Some(proj) = project {
         let proj = Project {
-            root: project,
-            aliases: HashMap::from_iter([(alias, directory)]),
+            root: proj,
+            aliases: HashMap::from_iter([(alias, directory.to_owned())]),
         };
         goto_file.projects.push(proj);
+    } else if let Some(current_project) = goto_file.projects.iter_mut().find(|p| current_dir.starts_with(&p.root)) {
+        current_project.aliases.insert(alias, directory.to_owned());
+    } else {
+        eprintln!("Not in a project and project flag wasn't specified");
+        exit(2);
     }
     serialize_goto_file(goto_file);
+}
+
+fn ls_cmd(all: bool) {
+    let goto_file = deserialize_goto_file();
+    let current_dir = env::current_dir().expect("Process has no working directory");
+
+    if all {
+        for project in goto_file.projects.iter() {
+            pretty_print_project(project);
+        }
+    } else {
+        if let Some(project) = goto_file.projects.iter().find(|project| current_dir.starts_with(&project.root)) {
+            pretty_print_project(project);
+        } else {
+            eprintln!("Not currently in a project");
+        }
+    }
+}
+
+fn pretty_print_project(project: &Project) {
+    println!("{}", project.root);
+    for (alias, dir) in project.aliases.iter() {
+        println!("\t{} = {}", alias, dir);
+    }
 }
