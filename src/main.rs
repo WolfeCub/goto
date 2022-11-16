@@ -112,8 +112,11 @@ fn add_cmd(alias: String, directory: String, project: Option<String>) {
     } else if let Some(current_project) = goto_file.projects.iter_mut().find(|p| current_dir.starts_with(&p.root)) {
         current_project.aliases.insert(alias, directory.to_owned());
     } else {
-        eprintln!("Not in a project and project flag wasn't specified");
-        exit(2);
+        let proj = Project {
+            root: current_dir.to_str().expect("Current directory isn't a valid sting").to_owned(),
+            aliases: HashMap::from_iter([(alias, directory.to_owned())]),
+        };
+        goto_file.projects.push(proj);
     }
     serialize_goto_file(goto_file);
 }
