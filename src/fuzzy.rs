@@ -30,23 +30,24 @@ impl SkimItem for NicknamedDir {
         Cow::Borrowed(&self.short)
     }
 
-    /* TODO: Make previews nicer (colored, tree) */
     fn preview(&self, _context: PreviewContext) -> ItemPreview {
-        let result = Command::new("tree")
-            .args(["-C", "-L", "2", &self.path])
-            .output();
+        generate_preview(&self.path)
+    }
+}
 
-        match result {
-            Ok(output) => {
-                ItemPreview::AnsiText(String::from_utf8_lossy(&output.stdout).into_owned())
-            }
-            Err(e) => {
-                if let ErrorKind::NotFound = e.kind() {
-                    let files = list_files(&self.path);
-                    ItemPreview::Text(files.join("\n"))
-                } else {
-                    ItemPreview::Text(format!("Unable to preview directory contents: {}", e))
-                }
+fn generate_preview(path: &str) -> ItemPreview {
+    let result = Command::new("tree")
+        .args(["-C", "-L", "2", path])
+        .output();
+
+    match result {
+        Ok(output) => ItemPreview::AnsiText(String::from_utf8_lossy(&output.stdout).into_owned()),
+        Err(e) => {
+            if let ErrorKind::NotFound = e.kind() {
+                let files = list_files(path);
+                ItemPreview::Text(files.join("\n"))
+            } else {
+                ItemPreview::Text(format!("Unable to preview directory contents: {}", e))
             }
         }
     }
@@ -94,7 +95,10 @@ where
         drop(self.tx_item); // so that skim could know when to stop waiting for more items.
 
         let options = SkimOptionsBuilder::default()
-            .height(Some("50%"))
+            // https://github.com/lotabout/skim/issues/494
+            // There's an issue where setting height causes the TUI to not be cleared.
+            // So for now we aren't setting it.
+            // .height(Some("50%"))
             .preview(Some(""))
             .multi(false)
             .build()
@@ -117,6 +121,10 @@ where
 impl SkimItem for Project {
     fn text(&self) -> Cow<str> {
         self.root.as_str().into()
+    }
+
+    fn preview(&self, _context: PreviewContext) -> ItemPreview {
+        generate_preview(&self.root)
     }
 }
 
