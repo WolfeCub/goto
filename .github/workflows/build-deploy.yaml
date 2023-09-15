@@ -26,7 +26,7 @@ jobs:
         run: cargo build --release
 
       - name: Rename binary
-        run: mv ./target/release/gotoctl gotoctl-x86_64-linux
+        run: mv ./target/release/goto_rs goto_rs-x86_64-linux
 
       - name: Define pre-release name
         id: vars
@@ -35,6 +35,6 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: gotoctl-x86_64-linux
+          files: goto_rs-x86_64-linux
           prerelease: true
           tag_name: ${{ steps.vars.outputs.sha_short }}
