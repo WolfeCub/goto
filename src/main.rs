@@ -1,6 +1,6 @@
 #![feature(let_chains)]
+use anyhow::{Context, Result};
 use std::fs;
-use anyhow::{Result, Context};
 
 mod fuzzy;
 use fuzzy::*;
@@ -9,9 +9,11 @@ mod file;
 use file::*;
 
 pub fn main() -> Result<()> {
-    let wrapper = FuzzyMenu::new();
+    let wrapper = FuzzyMenu::<NicknamedDir>::new();
 
-    let project = get_project_for_current_dir()?;
+    let project = get_project_for_current_dir()
+        .transpose()
+        .unwrap_or_else(|| fuzzy_select_project())?;
 
     for (nickname, full_path) in project.aliases.iter() {
         let path = format!("{}/{full_path}", project.root);
@@ -33,4 +35,3 @@ pub fn main() -> Result<()> {
     println!("{}", result.path);
     Ok(())
 }
-
