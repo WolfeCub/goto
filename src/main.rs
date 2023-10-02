@@ -1,6 +1,6 @@
 #![feature(let_chains)]
 use anyhow::{Context, Result};
-use std::fs;
+use std::{fs, env};
 
 mod fuzzy;
 use fuzzy::*;
@@ -17,6 +17,8 @@ pub fn main() -> Result<()> {
 
     for (nickname, full_path) in project.aliases.iter() {
         let path = format!("{}/{full_path}", project.root);
+        wrapper.add_option(NicknamedDir::new(nickname, &path, ""))?;
+
         for file in fs::read_dir(&path)
             .with_context(|| format!("Unable to read directory: {}", path))?
             .filter(|f| f.as_ref().expect("Unable to read file").path().is_dir())
@@ -26,11 +28,12 @@ pub fn main() -> Result<()> {
                 .file_name()
                 .into_string()
                 .expect("Unable to read file name");
-            wrapper.add_option(NicknamedDir::new(nickname, &name, &path))?;
+            wrapper.add_option(NicknamedDir::new(nickname, &path, &name))?;
         }
     }
 
-    let result = wrapper.run()?;
+    let args = env::args().skip(1).collect::<Vec<_>>();
+    let result = wrapper.run(args.join(" ").as_str())?;
 
     println!("{}", result.path);
     Ok(())

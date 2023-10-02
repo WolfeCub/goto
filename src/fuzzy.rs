@@ -17,7 +17,7 @@ pub struct NicknamedDir {
 }
 
 impl NicknamedDir {
-    pub fn new(nickname: &str, name: &str, path: &str) -> Self {
+    pub fn new(nickname: &str, path: &str, name: &str) -> Self {
         Self {
             short: format!("{nickname}/{name}"),
             path: format!("{path}/{name}"),
@@ -91,7 +91,7 @@ where
             .with_context(|| "Unable to send item to fuzzy matcher")
     }
 
-    pub fn run(self) -> anyhow::Result<T> {
+    pub fn run(self, initial_input: &str) -> anyhow::Result<T> {
         drop(self.tx_item); // so that skim could know when to stop waiting for more items.
 
         let options = SkimOptionsBuilder::default()
@@ -99,6 +99,7 @@ where
             // There's an issue where setting height causes the TUI to not be cleared.
             // So for now we aren't setting it.
             // .height(Some("50%"))
+            .query(Some(initial_input))
             .preview(Some(""))
             .multi(false)
             .build()
@@ -136,5 +137,5 @@ pub fn fuzzy_select_project() -> anyhow::Result<Project> {
         wrapper.add_option(p)?;
     }
 
-    wrapper.run()
+    wrapper.run("")
 }
